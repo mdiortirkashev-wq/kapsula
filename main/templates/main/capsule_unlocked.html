@@ -1,0 +1,54 @@
+{% extends 'main/base.html' %}
+{% load tr_tags %}
+{% block title %}{% tr 'letter_tab' %} 💌{% endblock %}
+
+{% block content %}
+<style>
+  #letter { opacity: 0; filter: blur(14px); transform: translateY(24px) scale(.97);
+            transition: all 1.4s cubic-bezier(.2,.8,.2,1); display: none; }
+  #letter.show { opacity: 1; filter: blur(0); transform: none; }
+  #seal.hide { opacity: 0; transform: scale(.8) rotate(-6deg); pointer-events: none; transition: all .7s ease; }
+  .line { opacity: 0; animation: fadeUp 1s ease forwards; }
+</style>
+
+<!-- 1) Muhrlangan konvert -->
+<div id="seal" class="glass rounded-3xl p-8 sm:p-12 text-center fade-up">
+  <div class="text-7xl mb-4 float">💌</div>
+  <h1 class="serif text-3xl text-white">{% tr 'letter_for' recipient=capsule.recipient_name %}</h1>
+  <p class="text-slate-400 mt-3 text-sm sm:text-base">
+    {% tr 'written_on' sender=capsule.sender_name date=capsule.created_at|date:"j E Y" %}
+  </p>
+  <button id="open-btn" type="button"
+    class="mt-8 rounded-xl bg-gradient-to-r from-amber-400 to-rose-400 text-slate-900 font-semibold px-8 py-3.5
+           shadow-lg shadow-rose-900/30 transition active:scale-95">
+    {% tr 'break_seal' %}
+  </button>
+</div>
+
+<!-- 2) Xat matni. {{ }} HTML'ni avtomatik escape qiladi (XSS himoyasi) -->
+<article id="letter" class="glass rounded-3xl p-6 sm:p-10">
+  <p class="text-slate-500 text-sm">{{ capsule.created_at|date:"j E Y" }}</p>
+  <h2 class="serif text-2xl sm:text-3xl text-white mt-1 mb-6 italic">{% tr 'dear' recipient=capsule.recipient_name %}</h2>
+
+  <div class="line text-slate-200 leading-relaxed text-base sm:text-lg break-words" style="animation-delay:.9s">
+    {{ capsule.message|linebreaksbr }}
+  </div>
+
+  <p class="line serif italic text-right text-violet-300 text-xl mt-8" style="animation-delay:1.8s">
+    — {{ capsule.sender_name }}
+  </p>
+</article>
+
+<script>
+  document.getElementById('open-btn').addEventListener('click', () => {
+    const seal = document.getElementById('seal');
+    const letter = document.getElementById('letter');
+    seal.classList.add('hide');
+    setTimeout(() => {
+      seal.style.display = 'none';
+      letter.style.display = 'block';
+      requestAnimationFrame(() => requestAnimationFrame(() => letter.classList.add('show')));
+    }, 600);
+  });
+</script>
+{% endblock %}

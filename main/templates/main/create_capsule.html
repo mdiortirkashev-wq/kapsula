@@ -1,0 +1,66 @@
+{% extends 'main/base.html' %}
+{% load tr_tags %}
+{% block title %}{% tr 'create_tab' %} · {% tr 'site_name' %}{% endblock %}
+
+{% block content %}
+  <div class="text-center mb-8">
+    <div class="text-5xl mb-4 float">⏳</div>
+
+    <p class="text-xs uppercase tracking-[0.3em] text-violet-200 mb-3">{% tr 'site_name' %}</p>
+
+    <h1 class="serif hero-title text-4xl sm:text-5xl font-semibold leading-tight">
+      {% tr 'hero_title' %}
+    </h1>
+
+    <!-- Iqtibos -->
+    <blockquote class="serif italic text-lg sm:text-xl text-amber-100 mt-6 px-4 py-1 border-l-4 border-amber-300/70 text-left">
+      {% tr 'hero_quote' %}
+    </blockquote>
+
+    <p class="text-slate-400 mt-5 text-sm sm:text-base">{% tr 'create_sub' %}</p>
+  </div>
+
+  <form method="post" novalidate class="space-y-5">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="rounded-xl bg-rose-500/10 border border-rose-400/30 text-rose-300 text-sm p-3">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    {% include 'main/_field.html' with field=form.sender_name %}
+    {% include 'main/_field.html' with field=form.recipient_name %}
+    {% include 'main/_field.html' with field=form.message %}
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      {% include 'main/_field.html' with field=form.unlock_date %}
+      {% include 'main/_field.html' with field=form.unlock_time %}
+    </div>
+
+    <div>
+      {% include 'main/_field.html' with field=form.tz_name %}
+      <p class="text-xs text-slate-500 mt-1.5">🌍 {% tr 'tz_hint' %}</p>
+    </div>
+
+    <button type="submit"
+      class="w-full rounded-xl bg-gradient-to-r from-violet-500 to-sky-500 hover:from-violet-400 hover:to-sky-400
+             text-white font-semibold py-3.5 shadow-lg shadow-violet-900/40 transition active:scale-[.98]">
+      {% tr 'submit' %}
+    </button>
+  </form>
+</div>
+
+{% if not form.is_bound %}
+<script>
+  // Brauzer vaqt mintaqasini avtomatik tanlaymiz
+  (function () {
+    const sel = document.getElementById('{{ form.tz_name.id_for_label }}');
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (tz && Array.from(sel.options).some(o => o.value === tz)) sel.value = tz;
+    } catch (e) {}
+  })();
+</script>
+{% endif %}
+{% endblock %}
