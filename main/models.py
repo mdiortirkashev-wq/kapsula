@@ -12,6 +12,7 @@ class Capsule(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     sender_name = models.CharField("Yuboruvchi ismi", max_length=100)
     recipient_name = models.CharField("Qabul qiluvchi ismi", max_length=100)
+    recipient_contact = models.CharField("Қабул қилувчи алоқаси", max_length=120, blank=True)
     message = models.TextField("Xat matni")
     created_at = models.DateTimeField("Yaratilgan vaqt", auto_now_add=True)
 
@@ -43,4 +44,19 @@ class Capsule(models.Model):
     @property
     def unlock_text(self):
         """Odam o'qiydigan ko'rinish, joriy tilda."""
+    @property
+    def unlock_text(self):
+        """Odam o'qiydigan ko'rinish, joriy tilda."""
         return f"{date_format(self.unlock_date, 'j E Y')}, {self.unlock_time:%H:%M} ({self.tz_name})"
+
+    @property
+    def contact_kind(self):
+        """'email' / 'telegram' / 'phone' yoki bo'sh."""
+        c = self.recipient_contact
+        if not c:
+            return ''
+        if c.startswith('@'):
+            return 'telegram'
+        if '@' in c:
+            return 'email'
+        return 'phone'

@@ -1,7 +1,10 @@
+import re
 from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from django import forms
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.utils import timezone
 
 from .models import Capsule
@@ -19,6 +22,7 @@ MAX_MESSAGE = 5000
 TEXT_KEYS = {
     'sender_name': ('sender_label', 'sender_ph'),
     'recipient_name': ('recipient_label', 'recipient_ph'),
+    'recipient_contact': ('contact_field_label', 'contact_field_ph'),
     'message': ('message_label', 'message_ph'),
     'unlock_date': ('date_label', None),
     'unlock_time': ('time_label', None),
@@ -36,10 +40,14 @@ class CapsuleForm(forms.ModelForm):
 
     class Meta:
         model = Capsule
-        fields = ['sender_name', 'recipient_name', 'message', 'unlock_date', 'unlock_time', 'tz_name']
+        fields = [
+            'sender_name', 'recipient_name', 'recipient_contact',
+            'message', 'unlock_date', 'unlock_time', 'tz_name',
+        ]
         widgets = {
             'sender_name': forms.TextInput(attrs={'class': INPUT}),
             'recipient_name': forms.TextInput(attrs={'class': INPUT}),
+            'recipient_contact': forms.TextInput(attrs={'class': INPUT, 'autocomplete': 'off'}),
             'message': forms.Textarea(attrs={'class': INPUT + " resize-none", 'rows': 8}),
             'unlock_date': forms.DateInput(format='%Y-%m-%d', attrs={'class': INPUT, 'type': 'date'}),
             'unlock_time': forms.TimeInput(format='%H:%M', attrs={'class': INPUT, 'type': 'time'}),
@@ -63,6 +71,9 @@ class CapsuleForm(forms.ModelForm):
         self.fields['unlock_date'].error_messages['invalid'] = t('err_date_invalid')
         self.fields['unlock_time'].error_messages['invalid'] = t('err_time_invalid')
 
+        # Aloqa maydoni ixtiyoriy
+        self.fields['recipient_contact'].required = False
+
         # Brauzer kalendarida o'tgan sanalarni o'chiramiz (aniq tekshiruv serverda)
         earliest = (timezone.now() - timedelta(hours=12)).date()
         self.fields['unlock_date'].widget.attrs['min'] = earliest.isoformat()
@@ -73,6 +84,34 @@ class CapsuleForm(forms.ModelForm):
 
     def clean_recipient_name(self):
         return self.cleaned_data['recipient_name'].strip()
+
+    def clean_recipient_contact(self):
+        """Email, telefon (+998...) yoki Telegram @akkaunt. Bo'sh bo'lishi mumkin."""
+        value = (self.cleaned_data.get('recipient_contact') or '').strip()
+        if not value:
+            return ''
+
+        # Telegram @akkaunt
+        if value.startswith('@'):
+            if re.fullmatch(r'@[A-Za-z][A-Za-z0-9_]{4,31}', value):
+                return value
+            raise ValidationError(t('err_contact'))
+
+        # Email
+        if '@' in value:
+            try:
+                validate_email(value)
+            except ValidationError:
+                raise ValidationError(t('err_contact'))
+            return value.lower()
+
+        # Telefon: albatta + va davlat kodi bilan
+        if re.fullmatch(r'\+[\d\s\-()]{6,20}', value):
+            digits = re.sub(r'\D', '', value)
+            if 7 <= len(digits) <= 15:
+                return '+' + digits
+
+        raise ValidationError(t('err_contact'))
 
     def clean_message(self):
         message = self.cleaned_data['message'].strip()
